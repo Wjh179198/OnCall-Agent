@@ -5,7 +5,6 @@
 
 import sys
 from loguru import logger
-from app.config import config
 
 
 def setup_logger():
@@ -23,10 +22,10 @@ def setup_logger():
     logger.add(
         sys.stdout,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{module}</cyan>.<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>",
-        level="DEBUG" if config.debug else "INFO",
+        level="DEBUG",
         colorize=True,
         backtrace=True,  # 显示完整异常栈信息
-        diagnose=config.debug,  # Debug 模式下显示变量值
+        diagnose=False,
     )
 
     # 添加文件输出（按天轮转，自动压缩）

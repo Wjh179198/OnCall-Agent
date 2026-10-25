@@ -1,5 +1,4 @@
 app_name: "SuperBizAgent"
 host: "0.0.0.0"
 port: 9900
-app_version: "1.0.0"
 app_debug: false

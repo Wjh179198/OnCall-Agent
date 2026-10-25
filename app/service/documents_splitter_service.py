@@ -7,7 +7,6 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from app.utils.logger import logger
-from app.config import config
 from app.utils.config_handler_util import milvus_conf
 
 
@@ -38,7 +37,7 @@ class DocumentSplitterService:
 
         logger.info(
             f"文档分割服务初始化完成, chunk_size={self.chunk_size}, "
-            f"secondary_chunk_szie={self.chunk_size * 2}, "
+            f"secondary_chunk_size={self.chunk_size * 2}, "
             f"overlap={self.chunk_overlap}"
         )
 
@@ -70,9 +69,9 @@ class DocumentSplitterService:
 
             # 添加文件路径元数据
             for doc in final_docs:
-                doc.metadata["_source"] = file_path
-                doc.metadata["_extension"] = ".md"
-                doc.metadata["_file_name"] = Path(file_path).name
+                doc.metadata["source"] = file_path
+                doc.metadata["extension"] = Path(file_path).suffix.lower() or ".md"
+                doc.metadata["file_name"] = Path(file_path).name
 
             logger.info(f"MarkDown 文档分割完成: {file_path} -> {len(final_docs)} 个分片")
             return final_docs
@@ -93,7 +92,7 @@ class DocumentSplitterService:
         Returns:
             List[Document]: 文档分片列表
         """
-        if file_path.endswith(".md"):
+        if Path(file_path).suffix.lower() == ".md":
             return self.split_markdown(content, file_path)
         else:
             return self.split_text(content, file_path)
@@ -120,9 +119,9 @@ class DocumentSplitterService:
                 texts=[content],
                 metadatas=[
                     {
-                        "_source": file_path,
-                        "_extension": Path(file_path).suffix,
-                        "_file_name": Path(file_path).name,
+                        "source": file_path,
+                        "extension": Path(file_path).suffix.lower(),
+                        "file_name": Path(file_path).name,
                     }
                 ],
             )
@@ -134,9 +133,7 @@ class DocumentSplitterService:
             logger.error(f"文本分割失败: {file_path}, 错误: {e}")
             raise
 
-
-    @staticmethod
-    def _merge_small_chunks(docs: List[Document], min_size: int) -> List[Document]:
+    def _merge_small_chunks(self, docs: List[Document], min_size: int) -> List[Document]:
         """
         合并太小的分片
 
@@ -157,7 +154,13 @@ class DocumentSplitterService:
         for doc in docs:
             if current_doc is None:
                 current_doc = doc
-            elif len(doc.page_content) < min_size and current_doc.page_content < config.chunk_max_size * 2:
+            elif (
+                    len(doc.page_content) < min_size
+                    and len(current_doc.page_content) + len(doc.page_content) <= self.chunk_size * 2
+                    # 只在同一章节内合并，避免丢失后续内容的 h1/h2 归属
+                    and current_doc.metadata.get("h1") == doc.metadata.get("h1")
+                    and current_doc.metadata.get("h2") == doc.metadata.get("h2")
+            ):
                 # 当前文档太小且合并后不会太大，则合并
                 current_doc.page_content += "\n\n" + doc.page_content
                 # 保留主文档的元数据
