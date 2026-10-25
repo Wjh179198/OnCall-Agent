@@ -1,7 +1,14 @@
 milvus_url: "http://134.175.135.230:19530"
 db_name: rag_tutorial
-timeout: 10000
 collection_name: oncall_agent
 
 chunk_size: 800
 chunk_overlap: 100
+
+# collection schema
+vector_dim: 1024
+id_max_length: 64
+text_max_length: 65535
+source_max_length: 1024
+extension_max_length: 32
+file_name_max_length: 512
