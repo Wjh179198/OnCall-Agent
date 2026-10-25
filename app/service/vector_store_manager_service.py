@@ -116,6 +116,8 @@ class VectorStoreManagerService:
             results = self.vector_store.search(
                 collection_name=milvus_conf["db_name"],
                 query=vector_query,
+                limit=k,
+                output_fields=["text"]
             )
             logger.debug(f"相似度搜索完成: query='{query}', 结果数={len(results[0])}")
             return results[0]
