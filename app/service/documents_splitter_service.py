@@ -170,3 +170,6 @@ class DocumentSplitterService:
             final_docs.append(current_doc)
 
         return final_docs
+
+# 全局单例
+document_splitter_service = DocumentSplitterService()
