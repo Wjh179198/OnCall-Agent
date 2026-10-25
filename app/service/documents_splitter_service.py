@@ -8,6 +8,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from app.utils.logger import logger
 from app.config import config
+from app.utils.config_handler_util import milvus_conf
 
 
 class DocumentSplitterService:
@@ -15,8 +16,8 @@ class DocumentSplitterService:
 
     def __init__(self):
         """初始化文档切分服务"""
-        self.chunk_size = config.chunk_max_size
-        self.chunk_overlap = config.chunk_overlap
+        self.chunk_size = milvus_conf["chunk_size"]
+        self.chunk_overlap = milvus_conf["chunk_overlap"]
 
         # markdown文档分割器
         self.markdown_splitter = MarkdownHeaderTextSplitter(
