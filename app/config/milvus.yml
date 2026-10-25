@@ -1,0 +1,7 @@
+milvus_url: "http://134.175.135.230:19530"
+db_name: rag_tutorial
+timeout: 10000
+collection_name: oncall_agent
+
+chunk_size: 800
+chunk_overlap: 100

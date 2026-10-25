@@ -3,42 +3,38 @@
 
 使用 Pydantic Settings 实现类型安全的配置管理
 """
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+from dotenv import load_dotenv
 
+load_dotenv(override=True)
 
-class Settings(BaseSettings):
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False, # .env里大写 这里小写 自动匹配
-        extra="ignore",
-    )
+class Settings:
 
     # 应用配置
-    app_name: str = "OnCallAgent"
+    app_name = os.getenv("APP_NAME")
     app_version: str = "1.0.0"
     debug: bool = False
-    host: str = "0.0.0.0"
-    port: int = 9900
+    host = os.getenv("HOST")
+    port = os.getenv("PORT")
 
     # 模型API配置
-    deepseek_api_key: str = ""
-    deepseek_base_url: str = "deepseek-flash" # LLM模型
-    siliconflow_api_key: str = "" # 向量模型
+    deepseek_api_key  = os.getenv("DEEPSEEK_API_KEY")
+    deepseek_base_url = os.getenv("DEEPSEEK_BASE_URL") # LLM模型
+    silicon_api_key = os.getenv("SILICONFLOW_API_KEY")
+    silicon_base_url = os.getenv("SILICON_BASE_URL") # 向量模型
 
     # milvus配置
-    milvus_host: str = "134.175.135.230"
-    milvus_port: int = 19530
-    milvus_timeout: int = 10000 # 超时时间
+    milvus_host = os.getenv("MILVUS_HOST")
+    milvus_port = os.getenv("MILVUS_PORT")
+    milvus_timeout = os.getenv("MILVUS_TIMEOUT") # 超时时间
 
     # RAG配置
-    rag_top_k: int = 3
-    rag_model: str = "deepseek-flash"
+    rag_top_k = os.getenv("RAG_TOP_K")
+    rag_model = os.getenv("RAG_MODEL")
 
     # 文档切分配置
-    chunk_max_size: int = 800
-    chunk_overlap: int = 100
+    chunk_max_size = os.getenv("CHUNK_MAX_SIZE")
+    chunk_overlap = os.getenv("CHUNK_OVERLAP")
 
 
 config = Settings()  # 全局单例
