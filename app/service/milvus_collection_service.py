@@ -67,3 +67,10 @@ def ensure_collection(client: MilvusClient) -> None:
         index_params=index_params,
     )
     logger.info(f"collection 创建完成: {collection_name}")
+
+if __name__ == "__main__":
+    client = MilvusClient(
+        uri=milvus_conf["milvus_url"],
+        db_name=milvus_conf["db_name"],
+    )
+    ensure_collection(client)
