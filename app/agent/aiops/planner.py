@@ -1,0 +1,150 @@
+"""
+Planner 节点：制定执行计划
+基于 LangGraph 官方教程实现
+"""
+from textwrap import dedent
+from typing import List, Dict, Any
+
+from langchain_core.messages import HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, Field
+
+from app.agent.aiops.state import PlanExecuteState
+from app.utils.logger import logger
+from app.tools.knowledge_tool import retrieve_knowledge
+from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
+
+from utils import format_tools_description
+from app.model.factory import chat_model
+
+
+class Plan(BaseModel):
+    """计划的输出格式"""
+    steps: List[str] = Field(
+        description="完成任务所需的不同步骤。这些步骤应该按顺序执行，每一步都建立在前一步的基础上。"
+    )
+
+# Planner 提示词
+planner_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            dedent("""
+                作为一个专家级别的规划者，你需要将复杂的任务分解为可执行的步骤。
+
+                可用工具列表（用于制定计划时参考）：
+
+                {tools_description}
+
+                注意：你的职责是制定计划，实际的工具调用由 Executor 负责执行。
+
+                {experience_context}
+
+                对于给定的任务，请创建一个简单的、逐步的计划来完成它。计划应该：
+                - 将任务分解为逻辑上独立的步骤
+                - 每个步骤应该明确使用哪些工具(如果需要工具的话)来获取信息, 最好能同时提供工具执行所需要的参数
+                - 步骤之间应该有清晰的依赖关系
+                - 步骤描述要具体、可操作
+                - **如果有相关经验文档，请参考其中的方法和步骤制定计划**
+
+                示例输入："分析当前系统的性能问题"
+                示例输出（假设有对应工具）：
+                步骤1: 使用 get_metrics 工具收集系统的 CPU 和内存使用情况
+                步骤2: 使用 query_logs 工具检查最近的错误日志
+                步骤3: 使用 query_database 工具分析慢查询日志
+                步骤4: 综合以上信息生成性能分析报告
+            """).strip(),
+        ),
+        ("placeholder", "{messages}"),
+    ]
+)
+
+async def planner(state: PlanExecuteState) -> Dict[str, Any]:
+    """
+    规划节点：根据用户输入生成执行计划
+
+    流程：
+    1. 先查询内部文档，获取相关经验和最佳实践
+    2. 基于经验文档和可用工具制定执行计划
+    """
+    logger.info("====执行planer计划节点====")
+
+    user_input = state["input"]
+    logger.info(f"用户输入的问题是: {user_input}")
+
+    # 查询知识库
+    try:
+        experience_docs = ""
+        try:
+            knowledge_result = await retrieve_knowledge.ainvoke({"query": user_input})
+            if knowledge_result and knowledge_result.strip():
+                experience_docs = knowledge_result
+                logger.info(f"找到相关文档, 长度为: {len(experience_docs)}")
+            else:
+                logger.warning(f"未找到相关文档: query: {user_input}")
+        except Exception as e:
+            logger.error(f"查询知识库出错, error: {e}")
+
+
+        # 合并工具
+        # 本地工具列表
+        local_tools = list(DEFAULT_LOCAL_AGENT_TOOLS)
+
+        # todo MCP工具
+        mcp_tools = []
+        logger.info(f"可用工具数量: 本地 {len(local_tools)} + MCP {len(mcp_tools)}")
+
+        all_tools = local_tools + mcp_tools
+        tools_description = format_tools_description(all_tools)
+
+        # 步骤3: 格式化经验文档上下文
+        if experience_docs:
+            experience_context = dedent(f"""
+                    ## 相关经验文档
+
+                    以下是从知识库中检索到的相关经验和最佳实践，请参考这些经验制定执行计划：
+
+                    {experience_docs}
+
+                    ---
+                """).strip()
+        else:
+            experience_context = ""
+
+        planner_model = planner_prompt | chat_model.with_structured_output(Plan)
+
+        # 生成执行计划
+        plan_result = await planner_model.ainvoke({
+            "messages": [("user", user_input)],
+            "experience_context": experience_context,
+            "tools_description": tools_description,
+        })
+
+        # 提取执行计划
+        if isinstance(plan_result, Plan):
+            plan_steps = plan_result.steps
+        else: # 如果返回的是字典
+            plan_steps = plan_result.get("steps", [])
+
+        logger.info(f"计划已生成，共 {len(plan_steps)} 个步骤")
+        for i, step in enumerate(plan_steps, 1):
+            logger.info(f"  步骤{i}: {step}")
+
+        return {"plan": plan_steps}
+
+    except Exception as e:
+        logger.error(f"生成计划失败: {e}", exc_info=True)
+        # 返回一个默认计划
+        return {
+            "plan": [
+                "收集相关信息",
+                "分析数据",
+                "生成报告"
+            ]
+        }
+
+
+
+
+
+
