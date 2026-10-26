@@ -391,11 +391,12 @@ class RagAgentService:
             await self._initialize_agent()
 
             config = {"configurable": {"thread_id": session_id}}
-            checkpoint_tuple = await self.checkpointer.aget_tuple(config)
-            if checkpoint_tuple is None:
+            state = self.agent.aget_state(config)
+
+            if state is None:
                 return []
 
-            messages = checkpoint_tuple.checkpoint.get("channel_values", {}).get("messages", [])
+            messages = state.values.get("messages", [])
 
             history = []
             for message in messages:
@@ -416,10 +417,34 @@ class RagAgentService:
             return history
         except Exception as e:
             logger.error(f"获取会话消息失败{e}")
+            
             return []
 
+    async def cleanup(self, session_id: str) -> bool:
+        """
+        清除指定session_id的会话历史
 
-            
+        Args:
+            session_id: 会话id (即thread_id)
+
+        Returns:
+                是否成功
+        """
+
+        try:
+            await self._initialize_agent()
+
+            await self.checkpointer.adelete_thread(session_id)
+            logger.info(f"已清除会话历史: {session_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"清除会话 {session_id} 失败: {e}")
+            return False
+
+
+# 全局单例 - 启用流式输出
+rag_agent_service = RagAgentService(streaming=True)
             
 
 
