@@ -5,7 +5,7 @@ from typing import List
 from langchain_core.documents import Document
 from pymilvus import MilvusClient
 
-from app.model.factory import embedding_model
+from app.core.factory import embedding_model
 from app.service.milvus_collection_service import ensure_collection
 from app.utils.config_handler_util import milvus_conf, rag_conf
 from app.utils.logger import logger

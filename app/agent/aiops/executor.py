@@ -11,7 +11,7 @@ from app.utils.logger import logger
 from app.agent.aiops.state import PlanExecuteState
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 
-from app.model.factory import chat_model
+from app.core.factory import chat_model
 
 async def executor(state: PlanExecuteState) -> Dict[str, Any]:
     """

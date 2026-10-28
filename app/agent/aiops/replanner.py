@@ -15,7 +15,7 @@ from app.agent.aiops.utils import format_tools_description
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 from app.utils.logger import logger
 
-from app.model.factory import chat_model
+from app.core.factory import chat_model
 
 
 class Response(BaseModel):

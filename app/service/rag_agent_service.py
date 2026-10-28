@@ -21,6 +21,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from app.utils.logger import logger
 from app.utils.config_handler_util import rag_conf
+from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 
 # psycopg 的异步模式不支持 Windows 默认的 ProactorEventLoop，
 # 必须在事件循环创建之前切换到 SelectorEventLoop
@@ -109,8 +110,8 @@ class RagAgentService:
             }
         )
 
-        # //todo定义基础工具
-        self.tools = []
+        # 定义基础工具
+        self.tools = list(DEFAULT_LOCAL_AGENT_TOOLS)
 
         # MCP客户端
         self.mcp_tools: list = []

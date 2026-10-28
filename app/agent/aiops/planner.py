@@ -5,7 +5,6 @@ Planner 节点：制定执行计划
 from textwrap import dedent
 from typing import List, Dict, Any
 
-from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
@@ -15,7 +14,7 @@ from app.tools.knowledge_tool import retrieve_knowledge
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 
 from utils import format_tools_description
-from app.model.factory import chat_model
+from app.core.factory import chat_model
 
 
 class Plan(BaseModel):
