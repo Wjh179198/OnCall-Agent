@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
-import os
+from pathlib import Path
 from app.utils.config_handler_util import app_conf
 from loguru import logger
 from app.api import chat, healthy, file, aiops
@@ -63,15 +63,17 @@ app.include_router(chat.router, prefix="/api", tags=["对话"])
 app.include_router(file.router, prefix="/api", tags=["文件管理"])
 app.include_router(aiops.router, prefix="/api", tags=["AIOps智能运维"])
 
-# 挂载静态文件
-static_dir = "static"
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+# 挂载静态文件（使用绝对路径，避免依赖启动时的工作目录）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+static_dir = PROJECT_ROOT / "static"
+static_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 @app.get("/")
 async def root():
     """返回首页"""
-    index_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(index_path):
+    index_path = static_dir / "index.html"
+    if index_path.is_file():
         return FileResponse(index_path)
     return {
         "message": f"Welcome to {app_conf["app_name"]} API",
@@ -81,12 +83,18 @@ async def root():
 
 
 if __name__ == "__main__":
+    import sys
+
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host=app_conf["host"],
         port=app_conf["port"],
         reload=app_conf["app_debug"],
-        log_level="info"
+        log_level="info",
+        # psycopg 异步模式要求 SelectorEventLoop，而 uvicorn>=0.36 在 Windows
+        # 非 reload 模式下会强制使用 ProactorEventLoop（忽略 event loop policy），
+        # 因此这里显式指定自定义的 loop 工厂
+        loop="app.core.event_loop:selector_loop_factory" if sys.platform == "win32" else "auto",
     )

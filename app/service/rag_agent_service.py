@@ -24,8 +24,10 @@ from app.utils.logger import logger
 from app.utils.config_handler_util import rag_conf
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 
-# psycopg 的异步模式不支持 Windows 默认的 ProactorEventLoop，
-# 必须在事件循环创建之前切换到 SelectorEventLoop
+# psycopg 的异步模式依赖 loop.add_reader()，不支持 Windows 默认的 ProactorEventLoop。
+# 这里的 policy 只对「由标准 asyncio.run 创建的事件循环」生效；
+# uvicorn>=0.36 会忽略 policy 自行创建事件循环，所以启动时必须通过
+# loop="app.core.event_loop:selector_loop_factory" 指定 SelectorEventLoop。
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -203,7 +205,9 @@ class RagAgentService:
         if sys.platform == "win32" and isinstance(asyncio.get_running_loop(), asyncio.ProactorEventLoop):
             raise RuntimeError(
                 "psycopg 异步模式不支持 Windows 的 ProactorEventLoop，"
-                "请在应用启动前设置 asyncio.WindowsSelectorEventLoopPolicy()"
+                "请用 SelectorEventLoop 启动服务："
+                "uvicorn.run(..., loop='app.core.event_loop:selector_loop_factory')，"
+                "或直接运行 python app/main.py"
             )
 
         pool = AsyncConnectionPool(
@@ -395,7 +399,7 @@ class RagAgentService:
             await self._initialize_agent()
 
             config = {"configurable": {"thread_id": session_id}}
-            state = self.agent.aget_state(config)
+            state = await self.agent.aget_state(config)
 
             if state is None:
                 return []

@@ -37,7 +37,7 @@ class AIOpsService:
         # 添加边
         workFlowGraph.add_edge(START, NODE_PLANNER)
         workFlowGraph.add_edge(NODE_PLANNER, NODE_EXECUTOR)
-        workFlowGraph.add_edge(NODE_PLANNER, NODE_REPLANNER)
+        workFlowGraph.add_edge(NODE_EXECUTOR, NODE_REPLANNER)
 
         # replanner的边
         def should_continue(state: PlanExecuteState):
@@ -58,7 +58,7 @@ class AIOpsService:
             NODE_REPLANNER,
             should_continue,
             {
-                NODE_EXECUTOR: NODE_REPLANNER,
+                NODE_EXECUTOR: NODE_EXECUTOR,
                 END: END
             }
         )

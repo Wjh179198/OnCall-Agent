@@ -86,7 +86,7 @@ async def executor(state: PlanExecuteState) -> Dict[str, Any]:
         # 返回结果
         return {
             "plan": plan[1:],
-            "past_steps": (str(task), result),
+            "past_steps": [(str(task), result)],
         }
 
     except Exception as e:

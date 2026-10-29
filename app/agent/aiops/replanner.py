@@ -5,10 +5,10 @@ Replanner 节点：重新规划或生成最终响应
 from textwrap import dedent
 from typing import List, Dict, Any
 
-from langchain.chat_models.base import _ConfigurableModel, BaseModel
+from langchain.chat_models.base import _ConfigurableModel
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from app.agent.aiops.state import PlanExecuteState
 from app.agent.aiops.utils import format_tools_description
@@ -188,7 +188,7 @@ async def replanner(state: PlanExecuteState) -> Dict[str, Any]:
                 logger.info(f"决定生成新的执行计划: {len(new_steps)}")
                 if len(new_steps) > 0:
                     return {
-                        "new_steps": new_steps,
+                        "plan": new_steps,
                     }
                 else:
                     logger.warning("replan 但未提供新步骤，继续执行原计划")

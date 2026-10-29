@@ -14,7 +14,7 @@ from app.utils.logger import logger
 from app.tools.knowledge_tool import retrieve_knowledge
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 
-from utils import format_tools_description
+from app.agent.aiops.utils import format_tools_description
 from app.core.factory import chat_model
 
 

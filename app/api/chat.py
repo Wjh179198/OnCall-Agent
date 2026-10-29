@@ -159,7 +159,7 @@ async def clear_session(request: ClearRequest):
 
     except Exception as e:
         return ApiResponse(
-            status="failed" if is_success else "failed",
+            status="failed",
             message=str(e),
             data=None
         )

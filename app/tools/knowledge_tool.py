@@ -1,12 +1,13 @@
 """知识检索工具 - 从向量数据库中检索相关信息"""
-from typing import Tuple, List
+from typing import Any, Dict, Tuple, List
 from app.service.vector_search_service import SearchResult, vector_search_service
 from langchain_core.tools import tool
 
 from app.utils.logger import logger
 
+
 @tool(response_format="content_and_artifact")
-def retrieve_knowledge(query: str) -> Tuple[str, List[SearchResult]]:
+def retrieve_knowledge(query: str) -> Tuple[str, List[Dict[str, Any]]]:
     """从知识库中检索相关信息来回答问题
 
     当用户的问题涉及专业知识、文档内容或需要参考资料时，使用此工具。
@@ -15,7 +16,10 @@ def retrieve_knowledge(query: str) -> Tuple[str, List[SearchResult]]:
         query: 用户的问题或查询
 
     Returns:
-        Tuple[str, List[SearchResult]]: (格式化的上下文文本, 原始文档列表)
+        Tuple[str, List[Dict[str, Any]]]: (格式化的上下文文本, 原始文档列表)
+
+    注意：artifact 会随 ToolMessage 一起写入 checkpointer（msgpack 序列化），
+    因此必须返回可序列化的 dict，不能直接返回 SearchResult 对象。
     """
     try:
         logger.info(f"知识检索工具被调用: query: {query}")
@@ -28,7 +32,7 @@ def retrieve_knowledge(query: str) -> Tuple[str, List[SearchResult]]:
         context = format_query_result(query_result)
 
         logger.info(f"检索到{len(query_result)}条相关内容")
-        return context, query_result
+        return context, [item.to_dict() for item in query_result]
     except Exception as e:
         logger.error(f"检索工具调用失败 {e}")
         return "", []

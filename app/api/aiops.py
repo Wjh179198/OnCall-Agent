@@ -126,7 +126,7 @@ async def diagnose_stream(request: AIOpsRequest):
 
     async def event_generator():
         try:
-            for event in aiops_service.diagnose(session_id):
+            async for event in aiops_service.diagnose(session_id):
                 yield {
                     "event": "message",
                     "data": json.dumps(event, ensure_ascii=False),

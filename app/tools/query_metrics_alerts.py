@@ -18,9 +18,19 @@ from app.utils.logger import logger
 # 读取配置信息
 load_dotenv(override=True)
 
+def _get_prometheus_timeout() -> float:
+    """读取 Prometheus 请求超时时间，环境变量必须转换成 float 再交给 httpx。"""
+    raw = os.getenv("PROMETHEUS_REQUEST_TIMEOUT", "10")
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        logger.warning(f"PROMETHEUS_REQUEST_TIMEOUT 配置无效: {raw!r}，使用默认值 10 秒")
+        return 10.0
+
+
 # Prometheus baseurl
-PROMETHEUS_BASE_URL = os.getenv("PROMETHEUS_BASE_URL")
-PROMETHEUS_REQUEST_TIMEOUT = os.getenv("PROMETHEUS_REQUEST_TIMEOUT")
+PROMETHEUS_BASE_URL = (os.getenv("PROMETHEUS_BASE_URL") or "").rstrip("/")
+PROMETHEUS_REQUEST_TIMEOUT = _get_prometheus_timeout()
 # Prometheus Alerts API 相对 base URL 的路径（与 Query API 的 /api/v1/query 并列）
 ALERTS_API_PATH = "/api/v1/alerts"
 
@@ -53,7 +63,7 @@ def calculate_duration(active_at_str: str) -> str:
         return "unknown"
     now = datetime.now(timezone.utc)
     duration = now - active_at
-    total_seconds = max(0, duration.total_seconds())
+    total_seconds = int(max(0, duration.total_seconds()))
     hour = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
@@ -68,6 +78,9 @@ def query_prometheus_alerts_api() -> tuple[dict[str, Any], str | None]:
 
     返回 (JSON 体, 错误信息)。成功时第二项为 None；HTTP 或 JSON 解析失败时第一项为空 dict。
     """
+    if not PROMETHEUS_BASE_URL:
+        return {}, "PROMETHEUS_BASE_URL 未配置"
+
     api_url = f"{PROMETHEUS_BASE_URL}{ALERTS_API_PATH}"
     try:
         with httpx.Client(timeout=PROMETHEUS_REQUEST_TIMEOUT) as client:
@@ -78,6 +91,10 @@ def query_prometheus_alerts_api() -> tuple[dict[str, Any], str | None]:
         return {}, f"failed to query Prometheus alerts: {e}"
     except json.JSONDecodeError as e:
         return {}, f"failed to parse response: {e}"
+    except Exception as e:
+        # 兜底：配置错误、类型错误等也转成结构化错误，避免把整个执行步骤打成失败
+        logger.error(f"查询 Prometheus 告警失败: {e}", exc_info=True)
+        return {}, f"failed to query Prometheus alerts: {e}"
     return body, None
 
 def _pick_common_labels(labels: dict[str, Any]) -> dict[str, Any]:
@@ -124,7 +141,8 @@ def _simplify_alerts(result: dict[str, Any]) -> tuple[list[dict[str, Any]], dict
         state_counts[state] = state_counts.get(state, 0) + 1
 
         active_at = str(alter.get("activeAt", "") or "")
-        alter_name = str(alter.get("altername", "") or "")
+        # Prometheus 的告警名称在 labels.alertname 中，不在 alerts 项的顶层字段
+        alter_name = str(labels.get("alertname", "") or "")
 
         simplified.append(
             {
