@@ -9,6 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from app.agent.aiops.state import PlanExecuteState
+from app.agent.mcp_client import get_mcp_client_with_retry
 from app.utils.logger import logger
 from app.tools.knowledge_tool import retrieve_knowledge
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
@@ -89,8 +90,10 @@ async def planner(state: PlanExecuteState) -> Dict[str, Any]:
         # 本地工具列表
         local_tools = list(DEFAULT_LOCAL_AGENT_TOOLS)
 
-        # todo MCP工具
-        mcp_tools = []
+        # MCP工具
+        mcp_client = await get_mcp_client_with_retry()
+        mcp_tools = await mcp_client.get_tools()
+
         logger.info(f"可用工具数量: 本地 {len(local_tools)} + MCP {len(mcp_tools)}")
 
         all_tools = local_tools + mcp_tools

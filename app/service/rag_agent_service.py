@@ -19,6 +19,7 @@ from langchain.chat_models.base import init_chat_model
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
+from app.agent.mcp_client import get_mcp_client_with_retry
 from app.utils.logger import logger
 from app.utils.config_handler_util import rag_conf
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
@@ -165,7 +166,9 @@ class RagAgentService:
             if self._agent_initialized:
                 return
 
-            # todo 加载MCP工具
+            # MCP工具
+            mcp_client = await get_mcp_client_with_retry()
+            self.mcp_tools = await mcp_client.get_tools()
 
             all_tools = self.tools + self.mcp_tools
 

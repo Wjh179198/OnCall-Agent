@@ -12,6 +12,7 @@ from app.agent.aiops.state import PlanExecuteState
 from app.tools import DEFAULT_LOCAL_AGENT_TOOLS
 
 from app.core.factory import chat_model
+from app.agent.mcp_client import get_mcp_client_with_retry
 
 async def executor(state: PlanExecuteState) -> Dict[str, Any]:
     """
@@ -34,8 +35,10 @@ async def executor(state: PlanExecuteState) -> Dict[str, Any]:
     try:
         # 取出所有的工具
         local_tools = list(DEFAULT_LOCAL_AGENT_TOOLS)
-        # todo MCP工具
-        mcp_tools = []
+
+        # MCP工具
+        mcp_client = await get_mcp_client_with_retry()
+        mcp_tools = await mcp_client.get_tools()
 
         all_tools = local_tools + mcp_tools
         model_with_tools = chat_model.bind_tools(all_tools)

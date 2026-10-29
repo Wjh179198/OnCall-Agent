@@ -145,9 +145,9 @@ async def get_mcp_client(
 
 
 async def get_mcp_client_with_retry(
-        servers: Optional[Dict[str, Dict[str, str]]] = None,
-        tool_interceptors: Optional[List] = None,
-        force_new: bool = False
+    servers: Optional[Dict[str, Dict[str, str]]] = None,
+    tool_interceptors: Optional[List] = None,
+    force_new: bool = False
 ) -> MultiServerMCPClient:
     """
     获取或初始化带重试功能的 MCP 客户端
